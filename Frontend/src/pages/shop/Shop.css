@@ -356,6 +356,15 @@
   color: var(--ge-white);
 }
 
+.ge-shop-wishlist-btn.active {
+  color: #e0245e;
+}
+
+.ge-shop-wishlist-btn.active:hover {
+  background: #e0245e;
+  color: var(--ge-white);
+}
+
 .ge-shop-card h3 {
   font-size: 0.98rem;
   margin: 0 0 0.35rem;

@@ -25,9 +25,11 @@ const userSchema = new mongoose.Schema(
             enum: ["user", "admin"],
             default: "user",
         },
+        // new accounts can log in right away - no email verification
+        // step is required
         isVerified: {
             type: Boolean,
-            default: false
+            default: true
         },
         // Verification token store hoga
         verificationToken: {

@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllProducts } from "../../features/products/productSlicer";
 import { fetchCategories } from "../../features/catalog/catalogSlicer";
-import { addToWishlist } from "../../features/wishlist/wishlistSlicer";
+import {
+  addToWishlist,
+  fetchWishlist,
+  removeWishlistItem,
+} from "../../features/wishlist/wishlistSlicer";
 import "./Shop.css";
 
 const PRODUCTS_PER_PAGE = 20;
@@ -29,6 +33,9 @@ const Shop = () => {
   const { currentUser } = useSelector((state) => state.users);
   const { products, isLoading } = useSelector((state) => state.product);
   const { categories } = useSelector((state) => state.catalog);
+  const { items: wishlistItems, hasFetched: wishlistFetched } = useSelector(
+    (state) => state.wishlist
+  );
 
   // whether each filter accordion section is open or closed
   const [openFilters, setOpenFilters] = useState({
@@ -56,6 +63,12 @@ const Shop = () => {
     dispatch(fetchCategories());
   }, [dispatch]);
 
+  useEffect(() => {
+    if (currentUser && !wishlistFetched) {
+      dispatch(fetchWishlist());
+    }
+  }, [currentUser, wishlistFetched, dispatch]);
+
   const toggleFilter = (key) => {
     setOpenFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -81,7 +94,12 @@ const Shop = () => {
     setCurrentPage(1);
   };
 
-  const handleAddToWishlist = async (e, productId) => {
+  const isProductWishlisted = (productId) =>
+    wishlistItems.find(
+      (item) => (item.product?._id || item.product) === productId
+    );
+
+  const handleToggleWishlist = async (e, productId) => {
     e.preventDefault();
 
     if (!currentUser) {
@@ -89,9 +107,14 @@ const Shop = () => {
       return;
     }
 
+    const wishlistEntry = isProductWishlisted(productId);
+
     try {
-      await dispatch(addToWishlist(productId)).unwrap();
-      alert("Added to wishlist!");
+      if (wishlistEntry) {
+        await dispatch(removeWishlistItem(wishlistEntry._id)).unwrap();
+      } else {
+        await dispatch(addToWishlist(productId)).unwrap();
+      }
     } catch (error) {
       alert(error);
     }
@@ -362,6 +385,7 @@ const Shop = () => {
                       ((product.oldPrice - product.price) / product.oldPrice) * 100
                     )
                   : 0;
+                const isWishlisted = Boolean(isProductWishlisted(product._id));
 
                 return (
                   <Link
@@ -375,10 +399,10 @@ const Shop = () => {
                         <span className="ge-shop-badge">{discount}%</span>
                       )}
                       <span
-                        className="ge-shop-wishlist-btn"
-                        onClick={(e) => handleAddToWishlist(e, product._id)}
+                        className={`ge-shop-wishlist-btn ${isWishlisted ? "active" : ""}`}
+                        onClick={(e) => handleToggleWishlist(e, product._id)}
                       >
-                        <i className="bi bi-heart"></i>
+                        <i className={`bi ${isWishlisted ? "bi-heart-fill" : "bi-heart"}`}></i>
                       </span>
                     </div>
 

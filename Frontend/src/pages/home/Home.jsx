@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAllProducts } from "../../features/products/productSlicer";
+import { fetchRecentReviews } from "../../features/reviews/reviewSlicer";
 import "./Home.css";
 
 // real products have their category as a populated object ({ _id, name, ... }),
@@ -98,6 +99,105 @@ const ProductGrid = ({ items }) => {
   );
 };
 
+// carousel of customer reviews - shows real submitted reviews when
+// there are any, otherwise falls back to the static quotes above so
+// the section never looks empty on a fresh database
+const TestimonialCarousel = ({ reviews }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const slides =
+    reviews.length > 0
+      ? reviews.map((review) => ({
+          name: review.user?.name || "Verified Buyer",
+          text: review.comment,
+          rating: review.rating,
+          product: review.product?.name,
+        }))
+      : TESTIMONIALS.map((testimonial) => ({ ...testimonial, rating: 5 }));
+
+  // keep the index valid if the underlying review list ever shrinks
+  useEffect(() => {
+    if (activeIndex >= slides.length) {
+      setActiveIndex(0);
+    }
+  }, [slides.length, activeIndex]);
+
+  // auto-advance every 6 seconds
+  useEffect(() => {
+    if (slides.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % slides.length);
+    }, 6000);
+
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const goToPrev = () => {
+    setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const goToNext = () => {
+    setActiveIndex((prev) => (prev + 1) % slides.length);
+  };
+
+  const active = slides[activeIndex];
+
+  if (!active) return null;
+
+  return (
+    <div className="ge-testimonial-carousel">
+      <div className="ge-testimonial-carousel-track">
+        <div className="ge-testimonial-card ge-testimonial-card-active" key={activeIndex}>
+          <i className="bi bi-quote"></i>
+          {renderStars(active.rating)}
+          <p>"{active.text}"</p>
+          <span className="ge-testimonial-name">
+            {active.name}
+            {active.product && (
+              <span className="ge-testimonial-product"> · {active.product}</span>
+            )}
+          </span>
+        </div>
+      </div>
+
+      {slides.length > 1 && (
+        <div className="ge-testimonial-carousel-controls">
+          <button
+            type="button"
+            aria-label="Previous review"
+            onClick={goToPrev}
+            className="ge-testimonial-arrow"
+          >
+            <i className="bi bi-chevron-left"></i>
+          </button>
+
+          <div className="ge-testimonial-dots">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                aria-label={`Go to review ${index + 1}`}
+                className={`ge-testimonial-dot ${index === activeIndex ? "active" : ""}`}
+                onClick={() => setActiveIndex(index)}
+              ></button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            aria-label="Next review"
+            onClick={goToNext}
+            className="ge-testimonial-arrow"
+          >
+            <i className="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // a decorative wavy divider that sits between two sections
 const WaveDivider = ({ flip }) => (
   <div className={`ge-wave-divider ${flip ? "ge-wave-divider-flip" : ""}`}>
@@ -112,9 +212,11 @@ const Home = () => {
   const { currentUser } = useSelector((state) => state.users);
   const { currentSeller } = useSelector((state) => state.seller);
   const { products } = useSelector((state) => state.product);
+  const { recentItems: recentReviews } = useSelector((state) => state.reviews);
 
   useEffect(() => {
     dispatch(fetchAllProducts());
+    dispatch(fetchRecentReviews());
   }, [dispatch]);
 
   const skincare = getCategoryProducts(products, "Skincare");
@@ -254,16 +356,7 @@ const Home = () => {
           <div className="ge-home-divider"></div>
         </div>
 
-        <div className="ge-testimonial-grid">
-          {TESTIMONIALS.map((testimonial) => (
-            <div className="ge-testimonial-card" key={testimonial.name}>
-              <i className="bi bi-quote"></i>
-              {renderStars(5)}
-              <p>"{testimonial.text}"</p>
-              <span className="ge-testimonial-name">{testimonial.name}</span>
-            </div>
-          ))}
-        </div>
+        <TestimonialCarousel reviews={recentReviews} />
       </section>
 
       {/* ---------- Newsletter ---------- */}

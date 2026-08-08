@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../../features/users/userSlicer";
@@ -28,7 +28,7 @@ const Login = () => {
       // about which role is actually logged in right now
       dispatch(logoutSeller());
       navigate("/");
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };

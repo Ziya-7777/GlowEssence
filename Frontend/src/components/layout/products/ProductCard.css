@@ -75,6 +75,15 @@
   transform: scale(1.08);
 }
 
+.wishlist.active {
+  color: #e0245e;
+}
+
+.wishlist.active:hover {
+  background: #e0245e;
+  color: var(--ge-white);
+}
+
 .ge-product-info {
   padding: 1.2rem;
   display: flex;

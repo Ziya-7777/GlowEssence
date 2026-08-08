@@ -1,7 +1,12 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart, fetchCart } from "../../../features/cart/cartSlicer";
-import { addToWishlist } from "../../../features/wishlist/wishlistSlicer";
+import {
+  addToWishlist,
+  fetchWishlist,
+  removeWishlistItem,
+} from "../../../features/wishlist/wishlistSlicer";
 import "./ProductCard.css";
 
 // fills 5 stars based on how many the rating rounds to
@@ -24,6 +29,22 @@ const renderStars = (rating) => {
 const ProductCard = ({ product }) => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.users);
+  const { items: wishlistItems, hasFetched: wishlistFetched } = useSelector(
+    (state) => state.wishlist
+  );
+
+  // load the user's wishlist once so we know which hearts should
+  // already show as filled/red
+  useEffect(() => {
+    if (currentUser && !wishlistFetched) {
+      dispatch(fetchWishlist());
+    }
+  }, [currentUser, wishlistFetched, dispatch]);
+
+  const wishlistEntry = wishlistItems.find(
+    (item) => (item.product?._id || item.product) === product._id
+  );
+  const isWishlisted = Boolean(wishlistEntry);
 
   // stop the click from also opening the product page link,
   // since these buttons sit inside a <Link>
@@ -44,7 +65,7 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const handleAddToWishlist = async (e) => {
+  const handleToggleWishlist = async (e) => {
     e.preventDefault();
 
     if (!currentUser) {
@@ -53,8 +74,11 @@ const ProductCard = ({ product }) => {
     }
 
     try {
-      await dispatch(addToWishlist(product._id)).unwrap();
-      alert("Added to wishlist!");
+      if (isWishlisted) {
+        await dispatch(removeWishlistItem(wishlistEntry._id)).unwrap();
+      } else {
+        await dispatch(addToWishlist(product._id)).unwrap();
+      }
     } catch (error) {
       alert(error);
     }
@@ -78,10 +102,11 @@ const ProductCard = ({ product }) => {
           )}
 
           <button
-            className="wishlist"
-            onClick={handleAddToWishlist}
+            className={`wishlist ${isWishlisted ? "active" : ""}`}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            onClick={handleToggleWishlist}
           >
-            <i className="bi bi-heart"></i>
+            <i className={`bi ${isWishlisted ? "bi-heart-fill" : "bi-heart"}`}></i>
           </button>
 
         </div>

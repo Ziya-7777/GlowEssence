@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchCategories,
@@ -180,7 +180,7 @@ const SellerDashboard = () => {
       ).unwrap();
 
       setForm(INITIAL_FORM);
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };
@@ -220,7 +220,7 @@ const SellerDashboard = () => {
 
       setEditingId(null);
       setForm(INITIAL_FORM);
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };

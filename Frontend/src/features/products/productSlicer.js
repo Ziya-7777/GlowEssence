@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
-const BASE_URL = "/api/product";
+const BASE_URL = `${API_URL}/api/product`;
 
 // A normal fetch(), but it gives up after a few seconds instead of
 // hanging forever if the backend/database is slow or unreachable.

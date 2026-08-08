@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckoutSteps from "../../components/layout/checkout/CheckoutSteps";
 import { fetchCart, clearCart } from "../../features/cart/cartSlicer";
 import {
   createOrder,
+  createCodOrder,
   verifyOrderPayment,
   clearOrderStatus,
 } from "../../features/orders/orderSlicer";
@@ -22,6 +23,9 @@ const Payment = () => {
   const { isLoading, error, completedOrder } = useSelector(
     (state) => state.order
   );
+
+  // which payment option the customer picked: "razorpay" or "cod"
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
 
   // load the latest cart when this page opens
   // and clear any old success/error message from a previous visit
@@ -78,7 +82,7 @@ const Payment = () => {
 
             // Step 4: payment confirmed, so empty the cart
             dispatch(clearCart());
-          } catch (err) {
+          } catch {
             // error message is already saved in redux state, nothing else to do
           }
         },
@@ -86,7 +90,23 @@ const Payment = () => {
 
       const razorpayCheckout = new window.Razorpay(options);
       razorpayCheckout.open();
-    } catch (err) {
+    } catch {
+      // error message is already saved in redux state, nothing else to do
+    }
+  };
+
+  // this runs when the customer clicks "Place Order" with Cash on Delivery
+  // selected - no payment gateway involved, the order is placed right away
+  const handleCodOrder = async () => {
+    const orderItems = items.map((item) => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+    }));
+
+    try {
+      await dispatch(createCodOrder(orderItems)).unwrap();
+      dispatch(clearCart());
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };
@@ -140,22 +160,71 @@ const Payment = () => {
 
             {currentUser && items.length > 0 && (
               <>
-                <p>
-                  Click below to pay securely with Razorpay. You can choose
-                  Card, UPI, Netbanking or Wallet in the payment window that
-                  opens.
-                </p>
+                <div className="ge-payment-methods">
+                  <label
+                    className={`ge-payment-method-option ${
+                      paymentMethod === "razorpay" ? "selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={paymentMethod === "razorpay"}
+                      onChange={() => setPaymentMethod("razorpay")}
+                    />
+                    <span className="ge-payment-method-icon">
+                      <i className="bi bi-credit-card"></i>
+                    </span>
+                    <span className="ge-payment-method-text">
+                      <strong>Pay Online</strong>
+                      <small>Card, UPI, Netbanking or Wallet via Razorpay</small>
+                    </span>
+                  </label>
+
+                  <label
+                    className={`ge-payment-method-option ${
+                      paymentMethod === "cod" ? "selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={paymentMethod === "cod"}
+                      onChange={() => setPaymentMethod("cod")}
+                    />
+                    <span className="ge-payment-method-icon">
+                      <i className="bi bi-cash-coin"></i>
+                    </span>
+                    <span className="ge-payment-method-text">
+                      <strong>Cash on Delivery</strong>
+                      <small>Pay in cash when your order arrives</small>
+                    </span>
+                  </label>
+                </div>
 
                 {error && <p className="ge-field-error">{error}</p>}
 
-                <button
-                  type="button"
-                  className="ge-btn-gold ge-checkout-btn"
-                  onClick={handlePayNow}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Processing..." : `Pay ₹ ${totalPrice}`}
-                </button>
+                {paymentMethod === "razorpay" ? (
+                  <button
+                    type="button"
+                    className="ge-btn-gold ge-checkout-btn"
+                    onClick={handlePayNow}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Processing..." : `Pay ₹ ${totalPrice}`}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ge-btn-gold ge-checkout-btn"
+                    onClick={handleCodOrder}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Placing Order..." : `Place Order · ₹ ${totalPrice}`}
+                  </button>
+                )}
               </>
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { resetPassword } from "../../features/users/userSlicer";
@@ -41,7 +41,7 @@ const ResetPassword = () => {
       // .unwrap() lets us use a normal try/catch here
       await dispatch(resetPassword({ token, password })).unwrap();
       navigate("/login");
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };

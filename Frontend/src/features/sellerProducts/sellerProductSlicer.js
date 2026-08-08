@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
-const BASE_URL = "/api/product";
+const BASE_URL = `${API_URL}/api/product`;
 
 const authHeaders = (token) => ({
     "Content-Type": "application/json",
@@ -92,7 +93,7 @@ export const fetchSellerDashboard = createAsyncThunk(
         try {
             const token = getState().seller.token;
 
-            const res = await fetch("/api/seller/dashboard", {
+            const res = await fetch(`${API_URL}/api/seller/dashboard`, {
                 headers: authHeaders(token),
             });
 

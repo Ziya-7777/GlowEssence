@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
 // Categories and brands are used to fill the dropdowns on the
 // seller's "Add Product" form.
@@ -14,7 +15,7 @@ export const fetchCategories = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch("/api/category/get-all-category", {
+            const res = await fetch(`${API_URL}/api/category/get-all-category`, {
                 headers: authHeaders(token),
             });
 
@@ -37,7 +38,7 @@ export const fetchBrands = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch("/api/brand/get-all-brands", {
+            const res = await fetch(`${API_URL}/api/brand/get-all-brands`, {
                 headers: authHeaders(token),
             });
 
@@ -62,7 +63,7 @@ export const createCategory = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch("/api/category/add-category", {
+            const res = await fetch(`${API_URL}/api/category/add-category`, {
                 method: "POST",
                 headers: authHeaders(token),
                 body: JSON.stringify({ name }),
@@ -87,7 +88,7 @@ export const updateCategory = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch(`/api/category/${id}`, {
+            const res = await fetch(`${API_URL}/api/category/${id}`, {
                 method: "PATCH",
                 headers: authHeaders(token),
                 body: JSON.stringify({ name }),
@@ -112,7 +113,7 @@ export const deleteCategory = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch(`/api/category/${id}`, {
+            const res = await fetch(`${API_URL}/api/category/${id}`, {
                 method: "DELETE",
                 headers: authHeaders(token),
             });
@@ -138,7 +139,7 @@ export const createBrand = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch("/api/brand/add-brand", {
+            const res = await fetch(`${API_URL}/api/brand/add-brand`, {
                 method: "POST",
                 headers: authHeaders(token),
                 body: JSON.stringify({ name }),
@@ -163,7 +164,7 @@ export const updateBrand = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch(`/api/brand/${id}`, {
+            const res = await fetch(`${API_URL}/api/brand/${id}`, {
                 method: "PATCH",
                 headers: authHeaders(token),
                 body: JSON.stringify({ name }),
@@ -188,7 +189,7 @@ export const deleteBrand = createAsyncThunk(
         try {
             const token = getState().users.token || getState().seller.token;
 
-            const res = await fetch(`/api/brand/${id}`, {
+            const res = await fetch(`${API_URL}/api/brand/${id}`, {
                 method: "DELETE",
                 headers: authHeaders(token),
             });

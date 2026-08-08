@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loginSeller } from "../../features/sellers/sellerSlicer";
-import { logoutUser } from "../../features/users/userSlicer";
 import "./Auth.css";
 
 const SellerLogin = () => {
@@ -20,7 +19,7 @@ const SellerLogin = () => {
     try {
       await dispatch(loginSeller({ email, password })).unwrap();
       navigate("/");
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };

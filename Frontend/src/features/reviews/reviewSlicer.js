@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
-const BASE_URL = "/api/review";
+const BASE_URL = `${API_URL}/api/review`;
 
 const authHeaders = (token) => ({
     "Content-Type": "application/json",
@@ -30,6 +31,30 @@ export const fetchReviews = createAsyncThunk(
             const res = await fetchWithTimeout(`${BASE_URL}/all-reviews/${productId}`, {
                 headers: authHeaders(token),
             });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                return rejectWithValue(data.message || "Failed to load reviews");
+            }
+
+            return data.reviews;
+        } catch (error) {
+            if (error.name === "AbortError") {
+                return rejectWithValue("This is taking too long. Please check your connection and try again.");
+            }
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Get the most recent, highest-rated reviews across all products.
+// Public endpoint - no login needed, used for the homepage testimonials.
+export const fetchRecentReviews = createAsyncThunk(
+    "reviews/fetchRecentReviews",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await fetchWithTimeout(`${BASE_URL}/recent`);
 
             const data = await res.json();
 
@@ -80,6 +105,10 @@ const reviews = createSlice({
     name: "reviews",
     initialState: {
         items: [],
+        // separate list for the homepage carousel (recent reviews
+        // across all products), kept apart from a single product's reviews
+        recentItems: [],
+        isLoadingRecent: false,
         isLoading: false,
         error: null,
     },
@@ -101,6 +130,16 @@ const reviews = createSlice({
             .addCase(fetchReviews.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
+            })
+            .addCase(fetchRecentReviews.pending, (state) => {
+                state.isLoadingRecent = true;
+            })
+            .addCase(fetchRecentReviews.fulfilled, (state, action) => {
+                state.isLoadingRecent = false;
+                state.recentItems = action.payload;
+            })
+            .addCase(fetchRecentReviews.rejected, (state) => {
+                state.isLoadingRecent = false;
             })
             .addCase(addReview.pending, (state) => {
                 state.error = null;

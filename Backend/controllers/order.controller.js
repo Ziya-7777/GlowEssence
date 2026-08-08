@@ -244,6 +244,99 @@ export const verifyPayment = async (req, res) => {
 
 };
 
+// Create a Cash on Delivery Order
+// No Razorpay involved - the order is placed right away and marked
+// "Pending" payment, to be collected when the order is delivered.
+// Expected body: { items: [ { productId, quantity }, ... ] }
+export const createCodOrder = async (req, res) => {
+
+    try {
+        const { items } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Items are required."
+            });
+        }
+
+        // Step 1: check every product exists and has enough stock
+        const orderItems = [];
+        let totalPrice = 0;
+
+        for (const item of items) {
+
+            const { productId, quantity } = item;
+
+            if (!productId || !quantity || quantity <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Each item needs a valid productId and quantity."
+                });
+            }
+
+            const product = await Product.findById(productId);
+
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Product not found."
+                });
+            }
+
+            if (product.stock < quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient stock for ${product.name}.`
+                });
+            }
+
+            orderItems.push({
+                product: productId,
+                quantity,
+                price: product.price
+            });
+
+            totalPrice += product.price * quantity;
+
+        }
+
+        // Step 2: create the order right away (no payment gateway needed)
+        const order = await Order.create({
+            user: req.user.id,
+            items: orderItems,
+            totalPrice,
+            paymentMethod: "COD",
+            paymentStatus: "Pending",
+            status: "Confirmed"
+        });
+
+        // Step 3: reduce stock for every product in the order
+        for (const item of orderItems) {
+            await Product.findByIdAndUpdate(item.product, {
+                $inc: { stock: -item.quantity }
+            });
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: "Order placed successfully. Pay with cash on delivery.",
+            order
+        });
+
+    }
+
+    catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+
+};
+
 // Cancel Order + Refund
 export const cancelOrder = async (req, res) => {
     try {

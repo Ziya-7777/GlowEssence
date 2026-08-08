@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -66,16 +66,18 @@ const Profile = () => {
   });
   const [infoBackup, setInfoBackup] = useState(null);
 
-  // whenever the real profile arrives, fill the form with real values
-  useEffect(() => {
-    if (profile) {
-      setInfoForm((prev) => ({
-        ...prev,
-        firstName: profile.name || "",
-        email: profile.email || "",
-      }));
-    }
-  }, [profile]);
+  // whenever the real profile arrives, fill the form with real values.
+  // Adjusting state during render (instead of in an effect) avoids an
+  // extra, unnecessary re-render.
+  const [prevProfile, setPrevProfile] = useState(null);
+  if (profile && profile !== prevProfile) {
+    setPrevProfile(profile);
+    setInfoForm((prev) => ({
+      ...prev,
+      firstName: profile.name || "",
+      email: profile.email || "",
+    }));
+  }
 
   const handleEditInfo = () => {
     setInfoBackup(infoForm); // remember current values in case user cancels
@@ -102,7 +104,7 @@ const Profile = () => {
       ).unwrap();
 
       setIsEditingInfo(false);
-    } catch (err) {
+    } catch {
       // error message is already saved in redux state, nothing else to do
     }
   };

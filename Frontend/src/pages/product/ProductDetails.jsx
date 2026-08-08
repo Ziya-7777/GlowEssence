@@ -5,7 +5,11 @@ import RelatedProducts from "../../components/layout/products/RelatedProducts";
 import NotFound from "../error/NotFound";
 import { fetchProductById } from "../../features/products/productSlicer";
 import { addToCart, fetchCart } from "../../features/cart/cartSlicer";
-import { addToWishlist } from "../../features/wishlist/wishlistSlicer";
+import {
+  addToWishlist,
+  fetchWishlist,
+  removeWishlistItem,
+} from "../../features/wishlist/wishlistSlicer";
 import { fetchReviews, addReview } from "../../features/reviews/reviewSlicer";
 import "./ProductDetails.css";
 
@@ -28,6 +32,17 @@ const renderStars = (rating) => {
   );
 };
 
+// turns a reviewer's name into 1-2 letter initials for the avatar circle
+const getInitials = (name) => {
+  if (!name) return "?";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
+};
+
 const ProductDetails = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
@@ -39,18 +54,35 @@ const ProductDetails = () => {
   } = useSelector((state) => state.product);
   const { items: reviews, isLoading: reviewsLoading, error: reviewError } =
     useSelector((state) => state.reviews);
+  const { items: wishlistItems, hasFetched: wishlistFetched } = useSelector(
+    (state) => state.wishlist
+  );
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewPage, setReviewPage] = useState(1);
+
+  // reset the review pagination back to page 1 whenever we navigate to a
+  // different product. Adjusting state during render (rather than in the
+  // effect below) avoids an extra, unnecessary re-render.
+  const [prevId, setPrevId] = useState(id);
+  if (id !== prevId) {
+    setPrevId(id);
+    setReviewPage(1);
+  }
 
   // load this product (and its reviews) whenever the page opens, using
   // the real database id from the URL
   useEffect(() => {
     dispatch(fetchProductById(id));
     dispatch(fetchReviews(id));
-    setReviewPage(1);
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (currentUser && !wishlistFetched) {
+      dispatch(fetchWishlist());
+    }
+  }, [currentUser, wishlistFetched, dispatch]);
 
   if (isLoading) {
     return <p style={{ textAlign: "center", margin: "80px" }}>Loading product...</p>;
@@ -77,6 +109,11 @@ const ProductDetails = () => {
   const discount = product.oldPrice
     ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
     : 0;
+
+  const wishlistEntry = wishlistItems.find(
+    (item) => (item.product?._id || item.product) === product._id
+  );
+  const isWishlisted = Boolean(wishlistEntry);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -113,6 +150,14 @@ const ProductDetails = () => {
     1
   );
 
+  const averageRating =
+    reviews.length > 0
+      ? (
+          reviews.reduce((sum, review) => sum + review.rating, 0) /
+          reviews.length
+        ).toFixed(1)
+      : null;
+
   const reviewStartIndex = (reviewPage - 1) * REVIEWS_PER_PAGE;
   const currentReviews = reviews.slice(
     reviewStartIndex,
@@ -142,15 +187,18 @@ const ProductDetails = () => {
     }
   };
 
-  const handleAddToWishlist = async () => {
+  const handleToggleWishlist = async () => {
     if (!currentUser) {
       alert("Please sign in to add items to your wishlist.");
       return;
     }
 
     try {
-      await dispatch(addToWishlist(product._id)).unwrap();
-      alert("Added to wishlist!");
+      if (isWishlisted) {
+        await dispatch(removeWishlistItem(wishlistEntry._id)).unwrap();
+      } else {
+        await dispatch(addToWishlist(product._id)).unwrap();
+      }
     } catch (error) {
       alert(error);
     }
@@ -205,11 +253,11 @@ const ProductDetails = () => {
                 Add To Cart
               </button>
               <button
-                className="wishlist-btn"
-                aria-label="Add to wishlist"
-                onClick={handleAddToWishlist}
+                className={`wishlist-btn ${isWishlisted ? "active" : ""}`}
+                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={handleToggleWishlist}
               >
-                <i className="bi bi-heart"></i>
+                <i className={`bi ${isWishlisted ? "bi-heart-fill" : "bi-heart"}`}></i>
               </button>
             </div>
 
@@ -225,7 +273,17 @@ const ProductDetails = () => {
 
         {/* ---------- Reviews ---------- */}
         <section className="product-reviews">
-          <h2>Customer Reviews</h2>
+          <div className="review-summary-head">
+            <h2>Customer Reviews</h2>
+            {averageRating && (
+              <div className="review-summary-badge">
+                {renderStars(Number(averageRating))}
+                <span className="review-summary-count">
+                  ({reviews.length} {reviews.length === 1 ? "review" : "reviews"})
+                </span>
+              </div>
+            )}
+          </div>
 
           {currentUser ? (
             <form className="review-form" onSubmit={handleSubmitReview}>
@@ -281,16 +339,22 @@ const ProductDetails = () => {
               <div className="review-list">
                 {currentReviews.map((review) => (
                   <div className="review-card" key={review._id}>
-                    <div className="review-card-head">
-                      <span className="review-author">
-                        {review.user?.name || "Anonymous"}
-                      </span>
-                      {renderStars(review.rating)}
+                    <div className="review-avatar">
+                      {getInitials(review.user?.name)}
                     </div>
-                    <p className="review-comment">{review.comment}</p>
-                    <span className="review-date">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </span>
+
+                    <div className="review-card-body">
+                      <div className="review-card-head">
+                        <span className="review-author">
+                          {review.user?.name || "Anonymous"}
+                        </span>
+                        <span className="review-date">
+                          {new Date(review.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {renderStars(review.rating)}
+                      <p className="review-comment">{review.comment}</p>
+                    </div>
                   </div>
                 ))}
               </div>

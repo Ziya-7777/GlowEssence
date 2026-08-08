@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
-const BASE_URL = "/api/wishlist";
+const BASE_URL = `${API_URL}/api/wishlist`;
 
 const authHeaders = (token) => ({
     "Content-Type": "application/json",
@@ -26,7 +27,10 @@ export const addToWishlist = createAsyncThunk(
                 return rejectWithValue(data.message || "Failed to add to wishlist");
             }
 
-            return data;
+            // productId is attached here (separately from the backend response)
+            // so the reducer can immediately mark this product as wishlisted
+            // without waiting for a full fetchWishlist() refetch.
+            return { ...data, productId };
         } catch (error) {
             return rejectWithValue(error.message);
         }
@@ -88,6 +92,9 @@ const wishlist = createSlice({
         items: [],
         isLoading: false,
         error: null,
+        // becomes true after the first successful fetchWishlist() so
+        // components know they don't need to fetch again
+        hasFetched: false,
     },
     reducers: {},
     extraReducers: (builder) => {
@@ -96,8 +103,14 @@ const wishlist = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(addToWishlist.fulfilled, (state) => {
+            .addCase(addToWishlist.fulfilled, (state, action) => {
                 state.isLoading = false;
+                // add it right away so the heart icon can turn red
+                // instantly, without waiting on a refetch
+                state.items.push({
+                    _id: action.payload.newWishlist?._id,
+                    product: { _id: action.payload.productId },
+                });
             })
             .addCase(addToWishlist.rejected, (state, action) => {
                 state.isLoading = false;
@@ -109,6 +122,7 @@ const wishlist = createSlice({
             })
             .addCase(fetchWishlist.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.hasFetched = true;
                 state.items = action.payload;
             })
             .addCase(fetchWishlist.rejected, (state, action) => {

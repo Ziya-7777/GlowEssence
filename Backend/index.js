@@ -1,12 +1,11 @@
 import express from "express";
 import "dotenv/config";
-import cors from "cors";
 import db from "./configs/db.js";
 import bodyParser from "body-parser";
 import router from "./routes/index.js";
-import razorpay from "./configs/razorpay.js";
+import connectDB from "./configs/db.js";
 
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 
@@ -18,18 +17,26 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-    return res.status(200).json({ message: "Server started." })
-})
+app.get("/", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "GlowEssence backend is running.",
+    });
+});
 
-app.use('/api', router)
+app.use("/api", router);
 
-app.listen(port, (error) => {
-    if (error) {
-        console.log(error);
-        return;
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        app.listen(PORT, "0.0.0.0", () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
     }
+};
 
-    console.log("server started.");
-    console.log(`http://localhost:${port}`);
-})
+startServer();

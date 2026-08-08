@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { API_URL } from "../../config/api.js";
 
-const BASE_URL = "/api/order";
+const BASE_URL = `${API_URL}/api/order`;
 
 const authHeaders = (token) => ({
     "Content-Type": "application/json",
@@ -61,6 +62,32 @@ export const verifyOrderPayment = createAsyncThunk(
     }
 );
 
+// Cash on Delivery: places the order immediately, no Razorpay popup involved
+export const createCodOrder = createAsyncThunk(
+    "order/createCodOrder",
+    async (items, { getState, rejectWithValue }) => {
+        try {
+            const token = getState().users.token;
+
+            const res = await fetch(`${BASE_URL}/create-cod-order`, {
+                method: "POST",
+                headers: authHeaders(token),
+                body: JSON.stringify({ items }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                return rejectWithValue(data.message || "Failed to place order");
+            }
+
+            return data.order;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 const order = createSlice({
     name: "order",
     initialState: {
@@ -98,6 +125,18 @@ const order = createSlice({
                 state.completedOrder = action.payload;
             })
             .addCase(verifyOrderPayment.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.payload;
+            })
+            .addCase(createCodOrder.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(createCodOrder.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.completedOrder = action.payload;
+            })
+            .addCase(createCodOrder.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload;
             });
